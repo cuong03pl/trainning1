@@ -11,6 +11,9 @@ export default function ElementLibraryItem({ data }) {
         id: Date.now(),
         name: data.name,
         image: data.image,
+        OId: data.OId,
+        width: 50,
+        height: 50,
       })
     );
   };

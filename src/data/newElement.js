@@ -1,15 +1,15 @@
 import waterImg from "@/assets/water.png";
 import steamImg from "@/assets/steam.png";
-import dustImg from "@/assets/dustImg.png";
+import dustImg from "@/assets/dust.png";
 export const newElement = [
   {
     image: waterImg,
-    name: "air",
+    name: "water",
     OId: 4,
   },
   {
     image: steamImg,
-    name: "earth",
+    name: "steam",
     OId: 5,
   },
   {

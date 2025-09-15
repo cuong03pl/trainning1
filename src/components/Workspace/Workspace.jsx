@@ -5,9 +5,14 @@ import clearImg from "@/assets/clear.png";
 import menuImg from "@/assets/menu.png";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
-import { update, removeAll, merge } from "@/slice/workspaceSlice";
+import {
+  update,
+  removeAll,
+  mergeAndAddToLibrary,
+} from "@/slice/workspaceSlice";
 export default function Workspace({ onFullScreen }) {
   const data = useSelector((state) => state.workspace);
+  const library = useSelector((state) => state.library);
   const [dragging, setDragging] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const dispatch = useDispatch();
@@ -22,19 +27,60 @@ export default function Workspace({ onFullScreen }) {
       })
     );
   };
-  const handleDown = (e, id) => {
+  const handleDown = (e, item) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setDragging({
-      id,
+      id: item?.id,
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
+      OId: item?.OId,
+      width: 50,
+      height: 50,
     });
   };
   const handleUp = () => {
-    const overlap = getOverlappingItems(dragging);
+    if (!dragging) return;
+
+    const draggingItem = data.find((item) => item.id === dragging.id);
+    if (!draggingItem) return;
+
+    const draggingWithRealCoords = {
+      ...draggingItem,
+    };
+
+    const overlap = isOverlap(draggingWithRealCoords);
+
     if (overlap.length > 0) {
-      // handle overlap
-      dispatch(merge({ A: dragging, B: overlap[0] }));
+      const closestOverlap = overlap.reduce((closest, current) => {
+        const draggingCenter = {
+          x: draggingWithRealCoords.x + draggingWithRealCoords.width / 2,
+          y: draggingWithRealCoords.y + draggingWithRealCoords.height / 2,
+        };
+        const currentCenter = {
+          x: current.x + (current.width || 50) / 2,
+          y: current.y + (current.height || 50) / 2,
+        };
+        const closestCenter = {
+          x: closest.x + (closest.width || 50) / 2,
+          y: closest.y + (closest.height || 50) / 2,
+        };
+
+        const currentDistance = Math.sqrt(
+          Math.pow(draggingCenter.x - currentCenter.x, 2) +
+            Math.pow(draggingCenter.y - currentCenter.y, 2)
+        );
+        const closestDistance = Math.sqrt(
+          Math.pow(draggingCenter.x - closestCenter.x, 2) +
+            Math.pow(draggingCenter.y - closestCenter.y, 2)
+        );
+
+        return currentDistance < closestDistance ? current : closest;
+      });
+
+      console.log("Merging:", draggingWithRealCoords, "with", closestOverlap);
+      dispatch(
+        mergeAndAddToLibrary({ A: draggingWithRealCoords, B: closestOverlap })
+      );
     }
     setDragging(null);
   };
@@ -49,15 +95,28 @@ export default function Workspace({ onFullScreen }) {
     onFullScreen(isFullScreen);
     setIsFullScreen(false);
   };
-  function getOverlappingItems(dragItem) {
+  function isOverlap(dragItem) {
     return data.filter((item) => {
-      if (item.id === dragItem.id) return false;
-      return !(
-        dragItem.x + dragItem.width < item.x ||
-        dragItem.x > item.x + item.width ||
-        dragItem.y + dragItem.height < item.y ||
-        dragItem.y > item.y + item.height
+      if (item?.id === dragItem?.id) return false;
+
+      const overlapX = Math.max(
+        0,
+        Math.min(dragItem.x + dragItem.width, item.x + (item.width || 50)) -
+          Math.max(dragItem.x, item.x)
       );
+      const overlapY = Math.max(
+        0,
+        Math.min(dragItem.y + dragItem.height, item.y + (item.height || 50)) -
+          Math.max(dragItem.y, item.y)
+      );
+      const overlapArea = overlapX * overlapY;
+
+      const dragArea = dragItem.width * dragItem.height;
+      const itemArea = (item.width || 50) * (item.height || 50);
+      const minArea = Math.min(dragArea, itemArea);
+      const requiredOverlap = minArea * 0.25;
+
+      return overlapArea >= requiredOverlap;
     });
   }
 
@@ -72,7 +131,7 @@ export default function Workspace({ onFullScreen }) {
         return (
           <div
             onDragStart={(e) => e.preventDefault()}
-            onMouseDown={(e) => handleDown(e, item?.id)}
+            onMouseDown={(e) => handleDown(e, item)}
             style={{ left: item?.x, top: item?.y }}
             key={index}
             className="absolute flex flex-col justify-center items-center cursor-pointer"
@@ -95,7 +154,7 @@ export default function Workspace({ onFullScreen }) {
       </div>
       <div className="absolute bottom-[10px] left-[10px] ">
         <span className="text-[80px] text-[#e8ded0] font-extralight">
-          0/120
+          {library?.length}/120
         </span>
       </div>
       <div className="absolute bottom-[10px] right-[10px] ">
