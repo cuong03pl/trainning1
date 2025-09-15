@@ -15,6 +15,8 @@ export default function Workspace({ onFullScreen }) {
   const library = useSelector((state) => state.library);
   const [dragging, setDragging] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [frontId, setFrontId] = useState(null);
+  const [hoverTargetId, setHoverTargetId] = useState(null);
   const dispatch = useDispatch();
 
   const handleMove = (e) => {
@@ -37,6 +39,7 @@ export default function Workspace({ onFullScreen }) {
       width: 50,
       height: 50,
     });
+    setFrontId(item?.id);
   };
   const handleUp = () => {
     if (!dragging) return;
@@ -46,6 +49,8 @@ export default function Workspace({ onFullScreen }) {
 
     const draggingWithRealCoords = {
       ...draggingItem,
+      width: dragging.width || 50,
+      height: dragging.height || 50,
     };
 
     const overlap = isOverlap(draggingWithRealCoords);
@@ -95,6 +100,48 @@ export default function Workspace({ onFullScreen }) {
     onFullScreen(isFullScreen);
     setIsFullScreen(false);
   };
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    const tempDrag = {
+      id: -1,
+      x: e.clientX - 25,
+      y: e.clientY - 25,
+      width: 50,
+      height: 50,
+    };
+    const overlap = isOverlap(tempDrag);
+    if (overlap.length === 0) {
+      setHoverTargetId(null);
+      return;
+    }
+    const closestOverlap = overlap.reduce((closest, current) => {
+      const draggingCenter = {
+        x: tempDrag.x + tempDrag.width / 2,
+        y: tempDrag.y + tempDrag.height / 2,
+      };
+      const currentCenter = {
+        x: current.x + (current.width || 50) / 2,
+        y: current.y + (current.height || 50) / 2,
+      };
+      const closestCenter = {
+        x: closest.x + (closest.width || 50) / 2,
+        y: closest.y + (closest.height || 50) / 2,
+      };
+      const currentDistance = Math.sqrt(
+        Math.pow(draggingCenter.x - currentCenter.x, 2) +
+          Math.pow(draggingCenter.y - currentCenter.y, 2)
+      );
+      const closestDistance = Math.sqrt(
+        Math.pow(draggingCenter.x - closestCenter.x, 2) +
+          Math.pow(draggingCenter.y - closestCenter.y, 2)
+      );
+      return currentDistance < closestDistance ? current : closest;
+    });
+    setHoverTargetId(closestOverlap.id);
+  };
+  const handleDragEndGlobal = () => {
+    setHoverTargetId(null);
+  };
   function isOverlap(dragItem) {
     return data.filter((item) => {
       if (item?.id === dragItem?.id) return false;
@@ -120,19 +167,69 @@ export default function Workspace({ onFullScreen }) {
     });
   }
 
+  function getHighlightedId() {
+    if (!dragging) return null;
+    const draggingItem = data.find((d) => d.id === dragging.id);
+    if (!draggingItem) return null;
+    const dragForOverlap = {
+      ...draggingItem,
+      width: dragging.width || 50,
+      height: dragging.height || 50,
+    };
+    const overlap = isOverlap(dragForOverlap);
+    if (overlap.length === 0) return null;
+    const closestOverlap = overlap.reduce((closest, current) => {
+      const draggingCenter = {
+        x: draggingItem.x + draggingItem.width / 2,
+        y: draggingItem.y + draggingItem.height / 2,
+      };
+      const currentCenter = {
+        x: current.x + (current.width || 50) / 2,
+        y: current.y + (current.height || 50) / 2,
+      };
+      const closestCenter = {
+        x: closest.x + (closest.width || 50) / 2,
+        y: closest.y + (closest.height || 50) / 2,
+      };
+      const currentDistance = Math.sqrt(
+        Math.pow(draggingCenter.x - currentCenter.x, 2) +
+          Math.pow(draggingCenter.y - currentCenter.y, 2)
+      );
+      const closestDistance = Math.sqrt(
+        Math.pow(draggingCenter.x - closestCenter.x, 2) +
+          Math.pow(draggingCenter.y - closestCenter.y, 2)
+      );
+      return currentDistance < closestDistance ? current : closest;
+    });
+    return closestOverlap.id;
+  }
+
   return (
     <div
+      id="workspace-root"
       className="w-full h-screen relative bg-[#faf8f5]"
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => handleDragOver(e)}
+      onDragEnd={handleDragEndGlobal}
       onMouseMove={(e) => handleMove(e)}
       onMouseUp={(e) => handleUp(e)}
     >
       {data?.map((item, index) => {
+        const highlightedId = dragging ? getHighlightedId() : hoverTargetId;
         return (
           <div
             onDragStart={(e) => e.preventDefault()}
             onMouseDown={(e) => handleDown(e, item)}
-            style={{ left: item?.x, top: item?.y }}
+            style={{
+              left: item?.x,
+              top: item?.y,
+              zIndex:
+                dragging && dragging.id === item.id
+                  ? 999
+                  : frontId === item.id
+                  ? 2
+                  : 1,
+              opacity: highlightedId && item.id === highlightedId ? 0.5 : 1,
+            }}
             key={index}
             className="absolute flex flex-col justify-center items-center cursor-pointer"
           >
