@@ -46,6 +46,9 @@ export const workspaceSlice = createSlice({
     removeAll: () => {
       return [];
     },
+    remove: (state, action) => {
+      return state.filter((item) => item.id !== action.payload);
+    },
     // merge: (state, action) => {
     //   const { A, B } = action.payload;
 
@@ -91,6 +94,6 @@ export const workspaceSlice = createSlice({
 });
 
 // Action creators are generated for each case reducer function
-export const { add, update, removeAll } = workspaceSlice.actions;
+export const { add, update, removeAll, remove } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

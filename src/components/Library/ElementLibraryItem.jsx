@@ -49,6 +49,19 @@ export default function ElementLibraryItem({ data }) {
       }
       document.body.classList.remove("ghost-dragging");
 
+      const libraryEl = document.getElementById("library-root");
+      if (libraryEl) {
+        const libraryRect = libraryEl.getBoundingClientRect();
+        if (
+          ev.clientX >= libraryRect.left &&
+          ev.clientX <= libraryRect.right &&
+          ev.clientY >= libraryRect.top &&
+          ev.clientY <= libraryRect.bottom
+        ) {
+          return;
+        }
+      }
+
       const workspace = document.getElementById("workspace-root");
       if (!workspace) return;
       const rect = workspace.getBoundingClientRect();

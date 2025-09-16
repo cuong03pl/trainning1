@@ -11,9 +11,9 @@ function App() {
   };
 
   return (
-    <div ref={containerRef} className="">
+    <div ref={containerRef} className="flex justify-between">
       <Workspace onFullScreen={handleFullScreen} />
-      <div className="absolute right-0 top-0 z-[998]">
+      <div className="absolute right-0 top-0 ">
         <Library />
       </div>
       {/* <Modal /> */}

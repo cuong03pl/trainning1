@@ -13,6 +13,7 @@ import {
 } from "@/slice/workspaceSlice";
 import { findClosestOverlap } from "../../ultis/findClosestOverlap";
 import { getOverlaps } from "../../ultis/getOverlaps";
+import { remove } from "../../slice/workspaceSlice";
 export default function Workspace({ onFullScreen }) {
   const data = useSelector((state) => state.workspace);
   const library = useSelector((state) => state.library);
@@ -86,8 +87,21 @@ export default function Workspace({ onFullScreen }) {
     });
     setFrontId(item?.id);
   };
-  const handleUp = () => {
+  const handleUp = (e) => {
     if (!dragging) return;
+
+    const libraryEl = document.getElementById("library-root");
+    if (libraryEl) {
+      const libraryRect = libraryEl.getBoundingClientRect();
+      if (
+        e.clientX >= libraryRect.left &&
+        e.clientX <= libraryRect.right &&
+        e.clientY >= libraryRect.top &&
+        e.clientY <= libraryRect.bottom
+      ) {
+        dispatch(remove(dragging.id));
+      }
+    }
 
     const draggingItem = data.find((item) => item.id === dragging.id);
     if (!draggingItem) return;
