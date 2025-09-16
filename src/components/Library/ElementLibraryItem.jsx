@@ -1,6 +1,8 @@
 import React, { useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { add, mergeAndAddToLibrary } from "@/slice/workspaceSlice";
+import { findClosestOverlap } from "../../ultis/findClosestOverlap";
+import { getOverlaps } from "../../ultis/getOverlaps";
 export default function ElementLibraryItem({ data }) {
   const dispatch = useDispatch();
   const workspaceItems = useSelector((state) => state.workspace);
@@ -71,49 +73,14 @@ export default function ElementLibraryItem({ data }) {
         OId: data.OId,
       };
 
-      const overlaps = workspaceItems.filter((item) => {
-        const overlapX = Math.max(
-          0,
-          Math.min(tempA.x + tempA.width, item.x + (item.width || 50)) -
-            Math.max(tempA.x, item.x)
-        );
-        const overlapY = Math.max(
-          0,
-          Math.min(tempA.y + tempA.height, item.y + (item.height || 50)) -
-            Math.max(tempA.y, item.y)
-        );
-        const overlapArea = overlapX * overlapY;
-        const dragArea = tempA.width * tempA.height;
-        const itemArea = (item.width || 50) * (item.height || 50);
-        const minArea = Math.min(dragArea, itemArea);
-        const requiredOverlap = minArea * 0.25;
-        return overlapArea >= requiredOverlap;
-      });
+      const overlaps = getOverlaps(tempA, workspaceItems);
 
       if (overlaps.length > 0) {
-        const closest = overlaps.reduce((closestItem, current) => {
-          const aCenter = {
-            x: tempA.x + tempA.width / 2,
-            y: tempA.y + tempA.height / 2,
-          };
-          const curCenter = {
-            x: current.x + (current.width || 50) / 2,
-            y: current.y + (current.height || 50) / 2,
-          };
-          const cloCenter = {
-            x: closestItem.x + (closestItem.width || 50) / 2,
-            y: closestItem.y + (closestItem.height || 50) / 2,
-          };
-          const curDist = Math.hypot(
-            aCenter.x - curCenter.x,
-            aCenter.y - curCenter.y
-          );
-          const cloDist = Math.hypot(
-            aCenter.x - cloCenter.x,
-            aCenter.y - cloCenter.y
-          );
-          return curDist < cloDist ? current : closestItem;
-        });
+        const aCenter = {
+          x: tempA.x + tempA.width / 2,
+          y: tempA.y + tempA.height / 2,
+        };
+        const closest = findClosestOverlap(overlaps, aCenter);
 
         try {
           await dispatch(

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+
 import zoomImg from "@/assets/zoom.png";
 import unzoomImg from "@/assets/unzoom.png";
 import clearImg from "@/assets/clear.png";
@@ -10,6 +11,8 @@ import {
   removeAll,
   mergeAndAddToLibrary,
 } from "@/slice/workspaceSlice";
+import { findClosestOverlap } from "../../ultis/findClosestOverlap";
+import { getOverlaps } from "../../ultis/getOverlaps";
 export default function Workspace({ onFullScreen }) {
   const data = useSelector((state) => state.workspace);
   const library = useSelector((state) => state.library);
@@ -58,35 +61,17 @@ export default function Workspace({ onFullScreen }) {
       height: 50,
     };
 
-    const overlap = isOverlap(tempDrag);
+    const overlap = getOverlaps(tempDrag, data);
     if (overlap.length === 0) {
       if (hoverTargetId !== null) setHoverTargetId(null);
       return;
     }
 
-    const closestOverlap = overlap.reduce((closest, current) => {
-      const draggingCenter = {
-        x: tempDrag.x + tempDrag.width / 2,
-        y: tempDrag.y + tempDrag.height / 2,
-      };
-      const currentCenter = {
-        x: current.x + (current.width || 50) / 2,
-        y: current.y + (current.height || 50) / 2,
-      };
-      const closestCenter = {
-        x: closest.x + (closest.width || 50) / 2,
-        y: closest.y + (closest.height || 50) / 2,
-      };
-      const currentDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - currentCenter.x, 2) +
-          Math.pow(draggingCenter.y - currentCenter.y, 2)
-      );
-      const closestDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - closestCenter.x, 2) +
-          Math.pow(draggingCenter.y - closestCenter.y, 2)
-      );
-      return currentDistance < closestDistance ? current : closest;
-    });
+    const draggingCenter = {
+      x: tempDrag.x + tempDrag.width / 2,
+      y: tempDrag.y + tempDrag.height / 2,
+    };
+    const closestOverlap = findClosestOverlap(overlap, draggingCenter);
     setHoverTargetId(closestOverlap.id);
   };
   const handleDown = (e, item) => {
@@ -113,34 +98,14 @@ export default function Workspace({ onFullScreen }) {
       height: dragging.height || 50,
     };
 
-    const overlap = isOverlap(draggingWithRealCoords);
+    const overlap = getOverlaps(draggingWithRealCoords, data);
 
     if (overlap.length > 0) {
-      const closestOverlap = overlap.reduce((closest, current) => {
-        const draggingCenter = {
-          x: draggingWithRealCoords.x + draggingWithRealCoords.width / 2,
-          y: draggingWithRealCoords.y + draggingWithRealCoords.height / 2,
-        };
-        const currentCenter = {
-          x: current.x + (current.width || 50) / 2,
-          y: current.y + (current.height || 50) / 2,
-        };
-        const closestCenter = {
-          x: closest.x + (closest.width || 50) / 2,
-          y: closest.y + (closest.height || 50) / 2,
-        };
-
-        const currentDistance = Math.sqrt(
-          Math.pow(draggingCenter.x - currentCenter.x, 2) +
-            Math.pow(draggingCenter.y - currentCenter.y, 2)
-        );
-        const closestDistance = Math.sqrt(
-          Math.pow(draggingCenter.x - closestCenter.x, 2) +
-            Math.pow(draggingCenter.y - closestCenter.y, 2)
-        );
-
-        return currentDistance < closestDistance ? current : closest;
-      });
+      const draggingCenter = {
+        x: draggingWithRealCoords.x + draggingWithRealCoords.width / 2,
+        y: draggingWithRealCoords.y + draggingWithRealCoords.height / 2,
+      };
+      const closestOverlap = findClosestOverlap(overlap, draggingCenter);
       dispatch(
         mergeAndAddToLibrary({ A: draggingWithRealCoords, B: closestOverlap })
       );
@@ -167,63 +132,21 @@ export default function Workspace({ onFullScreen }) {
       width: 50,
       height: 50,
     };
-    const overlap = isOverlap(tempDrag);
+    const overlap = getOverlaps(tempDrag, data);
     if (overlap.length === 0) {
       setHoverTargetId(null);
       return;
     }
-    const closestOverlap = overlap.reduce((closest, current) => {
-      const draggingCenter = {
-        x: tempDrag.x + tempDrag.width / 2,
-        y: tempDrag.y + tempDrag.height / 2,
-      };
-      const currentCenter = {
-        x: current.x + (current.width || 50) / 2,
-        y: current.y + (current.height || 50) / 2,
-      };
-      const closestCenter = {
-        x: closest.x + (closest.width || 50) / 2,
-        y: closest.y + (closest.height || 50) / 2,
-      };
-      const currentDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - currentCenter.x, 2) +
-          Math.pow(draggingCenter.y - currentCenter.y, 2)
-      );
-      const closestDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - closestCenter.x, 2) +
-          Math.pow(draggingCenter.y - closestCenter.y, 2)
-      );
-      return currentDistance < closestDistance ? current : closest;
-    });
+    const draggingCenter = {
+      x: tempDrag.x + tempDrag.width / 2,
+      y: tempDrag.y + tempDrag.height / 2,
+    };
+    const closestOverlap = findClosestOverlap(overlap, draggingCenter);
     setHoverTargetId(closestOverlap.id);
   };
   const handleDragEndGlobal = () => {
     setHoverTargetId(null);
   };
-  function isOverlap(dragItem) {
-    return data.filter((item) => {
-      if (item?.id === dragItem?.id) return false;
-
-      const overlapX = Math.max(
-        0,
-        Math.min(dragItem.x + dragItem.width, item.x + (item.width || 50)) -
-          Math.max(dragItem.x, item.x)
-      );
-      const overlapY = Math.max(
-        0,
-        Math.min(dragItem.y + dragItem.height, item.y + (item.height || 50)) -
-          Math.max(dragItem.y, item.y)
-      );
-      const overlapArea = overlapX * overlapY;
-
-      const dragArea = dragItem.width * dragItem.height;
-      const itemArea = (item.width || 50) * (item.height || 50);
-      const minArea = Math.min(dragArea, itemArea);
-      const requiredOverlap = minArea * 0.25;
-
-      return overlapArea >= requiredOverlap;
-    });
-  }
 
   function getHighlightedId() {
     if (!dragging) return null;
@@ -234,31 +157,13 @@ export default function Workspace({ onFullScreen }) {
       width: dragging.width || 50,
       height: dragging.height || 50,
     };
-    const overlap = isOverlap(dragForOverlap);
+    const overlap = getOverlaps(dragForOverlap, data);
     if (overlap.length === 0) return null;
-    const closestOverlap = overlap.reduce((closest, current) => {
-      const draggingCenter = {
-        x: draggingItem.x + draggingItem.width / 2,
-        y: draggingItem.y + draggingItem.height / 2,
-      };
-      const currentCenter = {
-        x: current.x + (current.width || 50) / 2,
-        y: current.y + (current.height || 50) / 2,
-      };
-      const closestCenter = {
-        x: closest.x + (closest.width || 50) / 2,
-        y: closest.y + (closest.height || 50) / 2,
-      };
-      const currentDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - currentCenter.x, 2) +
-          Math.pow(draggingCenter.y - currentCenter.y, 2)
-      );
-      const closestDistance = Math.sqrt(
-        Math.pow(draggingCenter.x - closestCenter.x, 2) +
-          Math.pow(draggingCenter.y - closestCenter.y, 2)
-      );
-      return currentDistance < closestDistance ? current : closest;
-    });
+    const draggingCenter = {
+      x: draggingItem.x + draggingItem.width / 2,
+      y: draggingItem.y + draggingItem.height / 2,
+    };
+    const closestOverlap = findClosestOverlap(overlap, draggingCenter);
     return closestOverlap.id;
   }
 
@@ -314,7 +219,7 @@ export default function Workspace({ onFullScreen }) {
           {library?.length}/120
         </span>
       </div>
-      <div className="absolute bottom-[10px] right-[10px] ">
+      <div className="absolute bottom-[10px] right-[260px] ">
         <div className="flex flex-col gap-4">
           <div onClick={handleRemoveAll} className="">
             <img src={clearImg} alt="" />

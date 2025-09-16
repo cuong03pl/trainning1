@@ -2,7 +2,6 @@ import "./App.css";
 import Workspace from "@/components/Workspace/Workspace";
 import Library from "@/components/Library/index";
 import { useRef } from "react";
-import Modal from "./components/Modal/Modal";
 function App() {
   const containerRef = useRef(null);
   const handleFullScreen = (isFull) => {
@@ -12,9 +11,11 @@ function App() {
   };
 
   return (
-    <div ref={containerRef} className="flex justify-between w-full h-full ">
+    <div ref={containerRef} className="">
       <Workspace onFullScreen={handleFullScreen} />
-      <Library />
+      <div className="absolute right-0 top-0 z-[998]">
+        <Library />
+      </div>
       {/* <Modal /> */}
     </div>
   );
